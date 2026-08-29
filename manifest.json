@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "roubilibo.omarchy-snip-record",
+  "name": "Omarchy Snip & Record",
+  "version": "0.1.0",
+  "author": "roubilibo",
+  "license": "MIT",
+  "description": "A Windows-like screenshot and screen recording overlay for Omarchy",
+  "kinds": ["overlay"],
+  "keepLoaded": true,
+  "entryPoints": {
+    "overlay": "CaptureOverlay.qml"
+  }
+}
