@@ -67,9 +67,10 @@ If you added the optional shortcut, remove its `Capture overlay` binding from
 
 ## Requirements
 
-- Omarchy shell with third-party overlay plugin support
-- Omarchy's existing capture commands
-- A configured screenshot and video directory
+- Omarchy Quattro
+
+No separate packages or capture tools are required. The plugin uses Omarchy's
+standard screenshot and screen recording functionality.
 
 ## License
 
