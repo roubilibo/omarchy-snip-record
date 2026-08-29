@@ -54,6 +54,17 @@ omarchy menu keybindings --print
 The existing `Print` screenshot and `Alt + Print` screen recording shortcuts
 can remain unchanged.
 
+## Removal
+
+Remove the plugin with:
+
+```bash
+omarchy plugin remove roubilibo.omarchy-snip-record --yes
+```
+
+If you added the optional shortcut, remove its `Capture overlay` binding from
+`~/.config/hypr/bindings.lua` and reload Hyprland.
+
 ## Requirements
 
 - Omarchy shell with third-party overlay plugin support
