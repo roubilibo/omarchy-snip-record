@@ -16,6 +16,8 @@ them.
 - Screen recording continues through Omarchy's existing audio/webcam menu.
 - The existing Omarchy status-bar recording indicator remains the stop control.
 - The screen is dimmed while the overlay is open.
+- The screen is frozen immediately while the overlay is open, using Omarchy's
+  native compositor-backed capture freeze.
 
 This plugin intentionally does not add countdown, pause, annotation, webcam,
 or recording logic of its own.

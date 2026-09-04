@@ -1,4 +1,5 @@
 import Quickshell
+import Quickshell.Io
 import Quickshell.Wayland
 import QtQuick
 import qs.Commons
@@ -24,19 +25,25 @@ Item {
 
   function open(payloadJson) {
     root.selectedMode = "screenshot"
-    root.opened = true
-    Qt.callLater(function() { focusCatcher.forceActiveFocus() })
+    freezeProcess.running = true
+    openDelay.restart()
   }
 
-  function dismiss() {
+  function dismiss(keepFreeze) {
+    openDelay.stop()
     root.opened = false
+    if (!keepFreeze)
+      freezeProcess.running = false
     if (root.shell && typeof root.shell.hide === "function")
       root.shell.hide((root.manifest && root.manifest.id) || "roubilibo.omarchy-snip-record")
   }
 
   function runAfterDismiss(action) {
     root.pendingAction = action
-    root.dismiss()
+    // Keep the first freeze alive until the native picker has started its own
+    // slurp layer. Stopping it here creates a visible live-screen flash while
+    // the native command is still starting.
+    root.dismiss(true)
     captureDelay.restart()
   }
 
@@ -46,6 +53,24 @@ Item {
 
   function runScreenrecordMenu() {
     root.runAfterDismiss("screenrecord")
+  }
+
+  // Use the same compositor-backed freeze as omarchy-capture-region. The
+  // overlay is opened on the next event-loop turn so its layer is mapped above
+  // hyprpicker's frozen-screen layer and remains interactive.
+  Process {
+    id: freezeProcess
+    command: ["hyprpicker", "-r", "-z"]
+  }
+
+  Timer {
+    id: openDelay
+    interval: 120
+    repeat: false
+    onTriggered: {
+      root.opened = true
+      Qt.callLater(function() { focusCatcher.forceActiveFocus() })
+    }
   }
 
   Timer {
@@ -58,6 +83,41 @@ Item {
       else if (root.pendingAction === "screenrecord")
         Quickshell.execDetached(["omarchy-menu", "summon", "trigger.capture.screenrecord"])
       root.pendingAction = ""
+      handoffPoll.start()
+      handoffTimeout.restart()
+    }
+  }
+
+  // Both native screenshot and region-recording flows create a slurp layer
+  // after their own hyprpicker freeze is ready. Once that layer exists, the
+  // temporary freeze owned by this overlay can be released without exposing a
+  // live frame between the two freezes.
+  Timer {
+    id: handoffPoll
+    interval: 40
+    repeat: true
+    onTriggered: if (!slurpProbe.running) slurpProbe.running = true
+  }
+
+  Timer {
+    id: handoffTimeout
+    interval: 10000
+    repeat: false
+    onTriggered: {
+      handoffPoll.stop()
+      freezeProcess.running = false
+    }
+  }
+
+  Process {
+    id: slurpProbe
+    command: ["pgrep", "-x", "slurp"]
+    onExited: function(exitCode) {
+      if (exitCode === 0) {
+        handoffPoll.stop()
+        handoffTimeout.stop()
+        freezeProcess.running = false
+      }
     }
   }
 
