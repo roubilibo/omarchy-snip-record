@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "roubilibo.omarchy-snip-record",
   "name": "Omarchy Snip & Record",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": "roubilibo",
   "license": "MIT",
   "description": "A Windows-like screenshot and screen recording overlay for Omarchy",

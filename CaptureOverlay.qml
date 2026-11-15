@@ -33,16 +33,22 @@ Item {
     openDelay.stop()
     root.opened = false
     if (!keepFreeze)
-      freezeProcess.running = false
+      root.releaseFreeze()
     if (root.shell && typeof root.shell.hide === "function")
       root.shell.hide((root.manifest && root.manifest.id) || "roubilibo.omarchy-snip-record")
   }
 
+  function releaseFreeze() {
+    handoffPoll.stop()
+    handoffTimeout.stop()
+    freezeProcess.running = false
+  }
+
   function runAfterDismiss(action) {
     root.pendingAction = action
-    // Keep the first freeze alive until the native picker has started its own
-    // slurp layer. Stopping it here creates a visible live-screen flash while
-    // the native command is still starting.
+    // Keep the first freeze alive while the native capture or selection layer
+    // starts. Screenshot and recording handoffs release it through their own
+    // lifecycle checks below.
     root.dismiss(true)
     captureDelay.restart()
   }
@@ -78,20 +84,25 @@ Item {
     interval: 140
     repeat: false
     onTriggered: {
-      if (root.pendingAction === "screenshot")
-        Quickshell.execDetached(["omarchy-capture-screenshot"])
-      else if (root.pendingAction === "screenrecord")
+      if (root.pendingAction === "screenshot") {
+        screenshotProcess.running = true
+      } else if (root.pendingAction === "screenrecord") {
         Quickshell.execDetached(["omarchy-menu", "summon", "trigger.capture.screenrecord"])
+        handoffPoll.start()
+        handoffTimeout.restart()
+      }
       root.pendingAction = ""
-      handoffPoll.start()
-      handoffTimeout.restart()
     }
   }
 
-  // Both native screenshot and region-recording flows create a slurp layer
-  // after their own hyprpicker freeze is ready. Once that layer exists, the
-  // temporary freeze owned by this overlay can be released without exposing a
-  // live frame between the two freezes.
+  // Omasnap uses its own native overlay, so release our freeze when its
+  // screenshot process exits. Screen recording still uses slurp as its picker.
+  Process {
+    id: screenshotProcess
+    command: ["omarchy-capture-screenshot"]
+    onExited: root.releaseFreeze()
+  }
+
   Timer {
     id: handoffPoll
     interval: 40
@@ -103,10 +114,7 @@ Item {
     id: handoffTimeout
     interval: 10000
     repeat: false
-    onTriggered: {
-      handoffPoll.stop()
-      freezeProcess.running = false
-    }
+    onTriggered: root.releaseFreeze()
   }
 
   Process {
@@ -114,9 +122,7 @@ Item {
     command: ["pgrep", "-x", "slurp"]
     onExited: function(exitCode) {
       if (exitCode === 0) {
-        handoffPoll.stop()
-        handoffTimeout.stop()
-        freezeProcess.running = false
+        root.releaseFreeze()
       }
     }
   }
